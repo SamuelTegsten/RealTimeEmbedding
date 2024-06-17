@@ -24,7 +24,7 @@ public class StreamGenerationController {
     public String generateText(@RequestParam String message,
                                    @RequestParam String uuid,
                                    @RequestParam String modelName,
-                                   @RequestParam int id)throws IOException {
+                                   @RequestParam int id) {
         return streamGenerationService.generateStream(message, modelName, uuid, id);
     }
 

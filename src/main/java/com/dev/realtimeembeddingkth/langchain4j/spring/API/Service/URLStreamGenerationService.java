@@ -11,8 +11,7 @@ public class URLStreamGenerationService {
         this.urlToStreamGeneration = urlToStreamGeneration;
     }
 
-    public String generateStreamWithURL(String question, String UrlPath, String uuid, int id) {
-        String modelName = "llama2";
+    public String generateStreamWithURL(String question, String UrlPath, String modelName, String uuid, int id) {
         return urlToStreamGeneration.generateStreamWithURL(question, UrlPath, modelName, uuid, id);
     }
 }

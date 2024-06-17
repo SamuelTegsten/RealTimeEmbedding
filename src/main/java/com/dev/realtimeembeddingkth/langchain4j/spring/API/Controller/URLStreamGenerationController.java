@@ -23,8 +23,9 @@ public class URLStreamGenerationController {
             @RequestParam String message,
             @RequestParam String urlPath,
             @RequestParam String uuid,
+            @RequestParam String modelName,
             @RequestParam int id){
-        return urlStreamGenerationService.generateStreamWithURL(message, urlPath, uuid, id);
+        return urlStreamGenerationService.generateStreamWithURL(message, urlPath, modelName, uuid, id);
     }
 }
 

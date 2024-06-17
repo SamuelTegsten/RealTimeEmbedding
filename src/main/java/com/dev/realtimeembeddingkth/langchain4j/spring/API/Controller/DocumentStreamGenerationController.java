@@ -23,8 +23,9 @@ public class DocumentStreamGenerationController {
             @RequestParam String message,
             @RequestPart("document") MultipartFile document,
             @RequestParam String uuid,
+            @RequestParam String modelName,
             @RequestParam int id) throws IOException {
-        documentStreamGenerationService.generateStreamWithDocument(message,document, uuid, id);
+        documentStreamGenerationService.generateStreamWithDocument(message,document, modelName,uuid, id);
         return "Streaming";
     }
 }

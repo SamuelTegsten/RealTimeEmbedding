@@ -13,8 +13,7 @@ public class EmbeddingGenerationService {
         this.embeddingGeneration = embeddingGeneration;
     }
 
-    public void generateStreamWithEmbedding(String question, String uuid, int id) throws IOException {
-        String model = "phi3:instruct";
-        embeddingGeneration.generateEmbedding(question, model, uuid, id);
+    public void generateStreamWithEmbedding(String question, String modelName, String uuid, int id) throws IOException {
+        embeddingGeneration.generateEmbedding(question, modelName, uuid, id);
     }
 }

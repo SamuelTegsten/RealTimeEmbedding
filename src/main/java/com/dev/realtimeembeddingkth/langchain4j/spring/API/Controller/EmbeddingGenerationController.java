@@ -21,8 +21,9 @@ public class EmbeddingGenerationController {
     public String generateStreamWithDocument(
             @RequestParam String message,
             @RequestParam String uuid,
+            @RequestParam String modelName,
             @RequestParam int id) throws IOException {
-        embeddingGenerationService.generateStreamWithEmbedding(message, uuid, id);
+        embeddingGenerationService.generateStreamWithEmbedding(message, modelName, uuid, id);
         return "Streaming";
     }
 
