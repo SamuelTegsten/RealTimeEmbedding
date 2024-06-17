@@ -32,14 +32,17 @@ RUN curl -L https://github.com/docker/compose/releases/download/1.29.2/docker-co
     chmod +x /usr/local/bin/docker-compose
 
 # Create a volume for permanent storage
-VOLUME /models
+VOLUME /app-service
 
-# Set the working directory
-WORKDIR /models
+FROM maven:3.8.4-openjdk-17 as maven-builder
+COPY src /app/src
+COPY pom.xml /app
 
-# Copy the application JAR file
-ARG JAR_FILE=target/LangBotChain-0.0.1-SNAPSHOT.jar
-COPY ${JAR_FILE} app.jar
+RUN mvn -f /app/pom.xml clean package -DskipTests
+FROM openjdk:17-alpine
 
-# Define the entry point for the container
-ENTRYPOINT ["java","-jar","/app.jar"]
+COPY --from=maven-builder app/target/dockube-spring-boot.jar /app-service/dockube-spring-boot.jar
+WORKDIR /app-service
+
+EXPOSE 9090
+ENTRYPOINT ["java","-jar","dockube-spring-boot.jar"]
