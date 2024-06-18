@@ -36,21 +36,25 @@ sudo apt-get install -y nvidia-container-toolkit
 4. Download Nvidia Toolkit on the VM (see NVIDIA GPU drivers / NVIDIA Container Toolkit for command)
 5. Update the system:
 ```apt update && apt upgrade -y && apt autoremove -y```
-6. Download Nividia Drivers on the VM:
+6. Run:
+```sudo nvidia-ctk runtime configure --runtime=docker```
+7. Run:
+```sudo systemctl restart docker```
+8. Download Nividia Drivers on the VM:
 ```apt install nvidia-driver-XXX-server nvidia-utils-XXX-server -y```
 (replace XXX with the latest Linux version, see https://www.nvidia.com/en-us/drivers/unix/ for version)
-7. Reboot the VM (can take a while to reconnect to the VM).
-8. Run:
-```nvidia-smi``` in VM to see if GPU is enabled, otherwise redo step 5,6 & 7.
-9. Run:
-```docker run -d --gpus=all -v ollama:/root/.ollama -p 11434:11434 --name ollama ollama/ollama```
+9. Reboot the VM (can take a while to reconnect to the VM).
 10. Run:
-```git clone https://github.com/SamuelTegsten/RealTimeEmbedding.git```
+```nvidia-smi``` in VM to see if GPU is enabled, otherwise redo step 5,6 & 7.
 11. Run:
-```sudo apt update```
+```docker run -d --gpus=all -v ollama:/root/.ollama -p 11434:11434 --name ollama ollama/ollama```
 12. Run:
-```sudo apt install default-jdk maven```
+```git clone https://github.com/SamuelTegsten/RealTimeEmbedding.git```
 13. Run:
+```sudo apt update```
+14. Run:
+```sudo apt install default-jdk maven```
+15. Run:
 ```cd RealTimeEmbedding/```
 14. Run:
 ```mvn clean compile install```
