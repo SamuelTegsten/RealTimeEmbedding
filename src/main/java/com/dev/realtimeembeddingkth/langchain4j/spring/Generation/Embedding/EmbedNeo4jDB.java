@@ -15,6 +15,10 @@ import static dev.langchain4j.data.document.Metadata.metadata;
 public class EmbedNeo4jDB {
     public static void main(String[] args) {
         EmbeddingStore embeddingStore = initializeNeo4j();
+        // Uncomment the desired embedding function to run
+        //EmbedQuery1(embeddingStore);
+        //EmbedQuery2(embeddingStore);
+        //EmbedQuery3(embeddingStore);
         //EmbedQuery4(embeddingStore);
         //EmbedQuery5(embeddingStore);
         //EmbedQuery6(embeddingStore);
@@ -22,17 +26,16 @@ public class EmbedNeo4jDB {
         //EmbedQuery8(embeddingStore);
         //EmbedQuery9(embeddingStore);
         //EmbedQuery10(embeddingStore);
-        //EmbedQuery1(embeddingStore);
-        //EmbedQuery2(embeddingStore);
-        //EmbedQuery3(embeddingStore);
     }
 
+    // Method to embed the entire database
     private static void EmbedDB(EmbeddingStore embeddingStore) {
         EmbeddingModel embeddingModel = new BgeSmallEnV15QuantizedEmbeddingModel();
 
         Driver driver = GraphDatabase.driver("bolt://localhost:7687", AuthTokens.basic("neo4j", "Password123"));
         Session session = driver.session(SessionConfig.forDatabase("neo4j"));
 
+        // Embedding all nodes
         var nodesResult = session.run("MATCH (n) RETURN n");
         while (nodesResult.hasNext()) {
             Record record = nodesResult.next();
@@ -46,6 +49,7 @@ public class EmbedNeo4jDB {
             embeddingStore.add(embeddingModel.embed(segment).content(), segment);
         }
 
+        // Embedding all relationships (not recommended)
         var relationshipsResult = session.run("MATCH ()-[r]->() RETURN r");
         while (relationshipsResult.hasNext()) {
             Record record = relationshipsResult.next();
@@ -59,6 +63,35 @@ public class EmbedNeo4jDB {
             embeddingStore.add(embeddingModel.embed(segment).content(), segment);
         }
     }
+
+    //Takes any query and embeds the result for both nodes and relationships (IN PROGRESS --> Does not work well atm)
+    private static void embedNodesWithQuery(EmbeddingStore embeddingStore, String query) {
+        EmbeddingModel embeddingModel = new BgeSmallEnV15QuantizedEmbeddingModel();
+        Driver driver = GraphDatabase.driver("bolt://localhost:7687", AuthTokens.basic("neo4j", "Password123"));
+        Session session = driver.session(SessionConfig.forDatabase("neo4j"));
+
+        var result = session.run(query);
+        while (result.hasNext()) {
+            Record record = result.next();
+            for (Value value : record.values()) {
+                if (value.hasType(org.neo4j.driver.types.TypeSystem.getDefault().NODE())) {
+                    Node node = value.asNode();
+                    String nodeText = formatNodeText(node);
+                    String label = node.labels().iterator().next();
+                    TextSegment segment = TextSegment.from(nodeText, metadata("label", label));
+                    embeddingStore.add(embeddingModel.embed(segment).content(), segment);
+                } else if (value.hasType(org.neo4j.driver.types.TypeSystem.getDefault().RELATIONSHIP())) { //Not recommended
+                    Relationship relationship = value.asRelationship();
+                    String relationshipText = formatRelationshipText(relationship);
+                    TextSegment segment = TextSegment.from(relationshipText, metadata("type", relationship.type()));
+                    embeddingStore.add(embeddingModel.embed(segment).content(), segment);
+                }
+            }
+        }
+        session.close();
+        driver.close();
+    }
+
 
     //Query 1
     private static void EmbedQuery1(EmbeddingStore embeddingStore) {
@@ -401,13 +434,14 @@ public class EmbedNeo4jDB {
         }
     }
 
+    // Helper method to format node text for embedding
     private static String formatNodeText(Node node) {
         StringBuilder sb = new StringBuilder();
         node.asMap().forEach((key, value) -> sb.append(key).append(": ").append(value.toString()).append(" ,"));
         return sb.toString();
     }
 
-
+    // Helper method to format relationship text for embedding (not recommended)
     private static String formatRelationshipText(Relationship relationship) {
         String startNode = relationship.startNodeId() + "";
         String endNode = relationship.endNodeId() + "";
