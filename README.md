@@ -29,8 +29,8 @@ sudo apt-get install -y nvidia-container-toolkit
 ## CBH Cloud Configuration
 
 1. Start a VM with a GPU.
-2. Connect to the VM using: ssh -i "[KEY]" root@vm.cloud.cbh.kth.se -p [PORT]
-3. Download Docker: curl sSL https://get.docker.com/ | sudo sh
+2. Connect to the VM using: ```ssh -i "[KEY]" root@vm.cloud.cbh.kth.se -p [PORT]```
+3. Download Docker: ```curl sSL https://get.docker.com/ | sudo sh```
 4. Download Nvidia Toolkit on the VM (see NVIDIA GPU drivers / NVIDIA Container Toolkit for command)
 5. Update the system: apt update && apt upgrade -y && apt autoremove -y
 6. Download Nividia Drivers on the VM: apt install nvidia-driver-XXX-server nvidia-utils-XXX-server -y
