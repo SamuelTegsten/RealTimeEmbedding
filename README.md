@@ -58,6 +58,8 @@ sudo apt-get install -y nvidia-container-toolkit
 ```cd RealTimeEmbedding/```
 14. Run:
 ```mvn clean compile install```
+15. Run:
+```java -jar target/LangBotChain-0.0.1-SNAPSHOT.jar```
 
 # External Services
 ## UI (Supports normal conversations, files (txt & pdf) and url, embeddings is work in progress.
@@ -67,7 +69,3 @@ Save the UUID in options if you want the conversations to be used between differ
 ## Ollama server service
 - ```https://ollamaserverinfo.app.cloud.cbh.kth.se/```
 Can pull new models, delete existing ones, see the ollama server status and more.
-
-
-15. Run:
-```java -jar target/LangBotChain-0.0.1-SNAPSHOT.jar```
