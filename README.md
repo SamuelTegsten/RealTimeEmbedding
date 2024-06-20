@@ -82,7 +82,9 @@ Remember to reaquire the GPU after the duration is up, the program will terminat
 ## UI (Supports normal conversations, files (txt & pdf) and url, embeddings is work in progress.
 - ```https://realtimeembeddingui.app.cloud.cbh.kth.se/``` 
 - Save the UUID in options if you want the conversations to be used between different browsers / units.
+- Repo: ```https://github.com/Langchain-Chatbot-KTH/langchain-chatbot-frontend```
 
 ## Ollama server service
 - ```https://ollamaserverinfo.app.cloud.cbh.kth.se/```
 - Can pull new models, delete existing ones, see the ollama server status and more.
+- Repo: ```https://github.com/Langchain-Chatbot-KTH/ollamaserverinfo```
