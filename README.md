@@ -61,6 +61,26 @@ sudo apt-get install -y nvidia-container-toolkit
 15. Run:
 ```java -jar target/LangBotChain-0.0.1-SNAPSHOT.jar```
 
+Remember to reaquire the GPU after the duration is up, the program will terminate without a GPU.
+
+## Neo4j Cloud Configuration
+1. Run:
+```wget -O - https://debian.neo4j.com/neotechnology.gpg.key | sudo apt-key add -
+echo 'deb https://debian.neo4j.com stable 5' | sudo tee -a /etc/apt/sources.list.d/neo4j.list
+sudo apt-get update```
+2. Run:
+```sudo apt-get install neo4j-enterprise=1:[Latest Version]```
+2.1. (Optional step , if you do not accept the enterprise conditions via the terminal):
+```echo "neo4j-enterprise neo4j/question select I ACCEPT" | sudo debconf-set-selections
+echo "neo4j-enterprise neo4j/license note" | sudo debconf-set-selections```
+3. Run: 
+```systemctl start neo4j```
+4. Run: ```Cypher-shell```
+5. Enter neo4j for username and password.
+6. Change the password after the prompt to do so.
+7. Access via bolt://localhost:7687
+8. Or through the browser at http://localhost:7474
+
 # External Services
 ## UI (Supports normal conversations, files (txt & pdf) and url, embeddings is work in progress.
 - ```https://realtimeembeddingui.app.cloud.cbh.kth.se/``` 
