@@ -65,9 +65,7 @@ Remember to reaquire the GPU after the duration is up, the program will terminat
 
 ## Neo4j Cloud Configuration
 1. Run:
-```wget -O - https://debian.neo4j.com/neotechnology.gpg.key | sudo apt-key add -
-echo 'deb https://debian.neo4j.com stable 5' | sudo tee -a /etc/apt/sources.list.d/neo4j.list
-sudo apt-get update```
+```wget -O - https://debian.neo4j.com/neotechnology.gpg.key | sudo apt-key add - echo 'deb https://debian.neo4j.com stable 5' | sudo tee -a /etc/apt/sources.list.d/neo4j.list sudo apt-get update```
 2. Run: sudo apt-get install neo4j-enterprise=1:[Latest Version]
 2.1. (Optional step , if you do not accept the enterprise conditions via the terminal):
 echo "neo4j-enterprise neo4j/question select I ACCEPT" | sudo debconf-set-selections
