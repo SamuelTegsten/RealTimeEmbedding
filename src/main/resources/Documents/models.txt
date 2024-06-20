@@ -35,6 +35,11 @@ Model Properties: [embeddingModel, streamingLanguageModel, languageModel, stream
 Model Docker Image: llama3:latest
 Model Size: 4.7 GB
 ---------------------------
+Model Name: llama3:70b
+Model Properties: [embeddingModel, streamingLanguageModel, languageModel, streamingChatModel, chatModel]
+Model Docker Image: llama3:70b
+Model Size: 4.7 GB
+---------------------------
 Model Name: llama3:instruct
 Model Properties: [embeddingModel, streamingLanguageModel, languageModel, streamingChatModel, chatModel]
 Model Docker Image: llama3:instruct
@@ -87,6 +92,11 @@ Model Size: 1.7 GB
 Model Name: phi3
 Model Properties: [embeddingModel, streamingLanguageModel, languageModel, streamingChatModel, chatModel]
 Model Docker Image: phi3:latest
+Model Size: 2.3 GB
+---------------------------
+Model Name: phi3:14b
+Model Properties: [embeddingModel, streamingLanguageModel, languageModel, streamingChatModel, chatModel]
+Model Docker Image: phi3:14b
 Model Size: 2.3 GB
 ---------------------------
 Model Name: phi3:instruct

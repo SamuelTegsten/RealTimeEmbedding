@@ -27,6 +27,7 @@ public class PopulateOllamaModels {
 
         //Llama - Llama 2 is a collection of foundation language models ranging from 7B to 70B parameters. https://ollama.com/library/llama2
         models.add(new Model("llama3", ollamaProperties, "llama3:latest", 4.700));
+        models.add(new Model("llama3:70b", ollamaProperties, "llama3:70b", 4.700));
         models.add(new Model("llama3:instruct", ollamaProperties, "llama3:instruct", 4.700));
         models.add(new Model("llama3:text", ollamaProperties, "llama3:text", 4.700));
 
@@ -43,6 +44,7 @@ public class PopulateOllamaModels {
         models.add(new Model("phi", ollamaProperties, "phi:latest", 1.700));
         //Phi-3 - a 2.7B language model by Microsoft Research that demonstrates outstanding reasoning and language understanding capabilities. https://ollama.com/library/phi
         models.add(new Model("phi3", ollamaProperties, "phi3:latest", 2.300));
+        models.add(new Model("phi3:14b", ollamaProperties, "phi3:14b", 2.300));
         models.add(new Model("phi3:instruct", ollamaProperties, "phi3:instruct", 1.700));
 
         //Neural Chat - A fine-tuned model based on Mistral with good coverage of domain and language. https://ollama.com/library/neural-chat
