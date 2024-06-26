@@ -1,13 +1,24 @@
 package com.dev.realtimeembeddingkth.langchain4j.spring.Generation.Embedding;
 
+import dev.langchain4j.data.document.Metadata;
+import dev.langchain4j.data.embedding.Embedding;
 import dev.langchain4j.data.segment.TextSegment;
 import dev.langchain4j.model.embedding.EmbeddingModel;
 import dev.langchain4j.model.embedding.bge.small.en.v15.BgeSmallEnV15QuantizedEmbeddingModel;
+import dev.langchain4j.retriever.EmbeddingStoreRetriever;
+import dev.langchain4j.store.embedding.EmbeddingMatch;
+import dev.langchain4j.store.embedding.EmbeddingSearchRequest;
 import dev.langchain4j.store.embedding.EmbeddingStore;
 import org.neo4j.driver.*;
 import org.neo4j.driver.Record;
 import org.neo4j.driver.types.Node;
 import org.neo4j.driver.types.Relationship;
+import org.neo4j.driver.types.TypeSystem;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.logging.Filter;
 
 import static com.dev.realtimeembeddingkth.langchain4j.spring.Generation.Embedding.InitializeNeo4j.initializeNeo4j;
 import static dev.langchain4j.data.document.Metadata.metadata;
@@ -26,6 +37,100 @@ public class EmbedNeo4jDB {
         //EmbedQuery8(embeddingStore);
         //EmbedQuery9(embeddingStore);
         //EmbedQuery10(embeddingStore);
+        embedNodesWithQuery(embeddingStore, "MATCH (k:Kommun)" +
+                "MATCH (ay:Years)" +
+                "WHERE ay.year = 2021 " +
+                "MATCH (kat:kulturskol_antal_total)" +
+                "WHERE kat.value >= 0 " +
+                "MATCH (kat)-[:LOCATED_IN]->(k) " +
+                "MATCH (kat)-[:YEAR]->(ay) " +
+                "RETURN k, kat",
+                "List the number of participants in cultural schools for the year 2021 next to its municipality (Kommun). " +
+                        "You are looking at data from municipalities (Kommun) and years (Years). " +
+                        "I want data specifically for the year 2021.");
+    }
+
+    //Takes any query and embeds the result for both nodes and relationships (IN PROGRESS --> Does not work well atm)
+    private static void embedNodesWithQuery(EmbeddingStore embeddingStore, String query, String NLPQuestion) {
+        EmbeddingModel embeddingModel = new BgeSmallEnV15QuantizedEmbeddingModel();
+        Driver driver = GraphDatabase.driver("bolt://localhost:7687", AuthTokens.basic("neo4j", "Password123"));
+        Session session = driver.session(SessionConfig.forDatabase("neo4j"));
+
+        List<TextSegment> segments = new ArrayList<>();
+        var result = session.run(query);
+        while (result.hasNext()) {
+            Record record = result.next();
+            for (String key : record.keys()) {
+                Value value = record.get(key);
+                if (value.hasType(TypeSystem.getDefault().NODE())) {
+                    Node node = value.asNode();
+                    String nodeText = formatNodeText(node);
+                    String label = node.labels().iterator().next();
+                    TextSegment segment = TextSegment.from(nodeText, metadata("label", label));
+                    segments.add(segment);
+                } else if (value.hasType(TypeSystem.getDefault().RELATIONSHIP())) {
+                    Relationship relationship = value.asRelationship();
+                    String relationshipText = formatRelationshipText(relationship);
+                    TextSegment segment = TextSegment.from(relationshipText, metadata("type", relationship.type()));
+                    segments.add(segment);
+                } else if (value.hasType(TypeSystem.getDefault().STRING())) {
+                    String stringValue = value.asString();
+                    TextSegment segment = TextSegment.from(stringValue, metadata("type", "string"));
+                    segments.add(segment);
+                }
+            }
+        }
+
+        // Embed all segments and concatenate embeddings
+        List<Embedding> embeddings = embeddingModel.embedAll(segments).content(); // Assuming embedAll returns a Response with getBody method
+        Embedding combinedEmbedding = combineEmbeddings(embeddings); // Function to combine embeddings into one
+
+        TextSegment textSegment = TextSegment.from(NLPQuestion + "Content: " + segments);
+        Embedding queryEmbedding = embeddingModel.embed(NLPQuestion).content();
+        List<EmbeddingMatch<TextSegment>> relevant = embeddingStore.findRelevant(queryEmbedding, 25);
+        EmbeddingMatch<TextSegment> embeddingMatch = relevant.get(0);
+
+        System.out.println("Embedding Score: " + embeddingMatch.score() + "\n" + "Embedding Content: " + embeddingMatch.embedded().text());
+
+        embeddingStore.add(combinedEmbedding, textSegment);
+
+        session.close();
+        driver.close();
+    }
+
+    private static Embedding combineEmbeddings(List<Embedding> embeddings) {
+        int length = embeddings.get(0).dimension();
+        float[] combinedContent = new float[length];
+        for (Embedding embedding : embeddings) {
+            float[] content = embedding.vector();
+            for (int i = 0; i < length; i++) {
+                combinedContent[i] += content[i];
+            }
+        }
+        for (int i = 0; i < length; i++) {
+            combinedContent[i] /= embeddings.size();
+        }
+        return new Embedding(combinedContent);
+    }
+
+    // Helper method to format node text for embedding
+    private static String formatNodeText(Node node) {
+        StringBuilder sb = new StringBuilder();
+        node.asMap().forEach((key, value) -> sb.append(key).append(": ").append(value.toString()).append(" ,"));
+        return sb.toString();
+    }
+
+    // Helper method to format relationship text for embedding (not recommended)
+    private static String formatRelationshipText(Relationship relationship) {
+        String startNode = relationship.startNodeId() + "";
+        String endNode = relationship.endNodeId() + "";
+        String type = relationship.type();
+        StringBuilder sb = new StringBuilder();
+        sb.append("Start Node ID: ").append(startNode).append(", ");
+        sb.append("End Node ID: ").append(endNode).append(", ");
+        sb.append("Type: ").append(type).append(", ");
+        relationship.asMap().forEach((key, value) -> sb.append(key).append(": ").append(value).append(", "));
+        return sb.toString();
     }
 
     // Method to embed the entire database
@@ -63,35 +168,6 @@ public class EmbedNeo4jDB {
             embeddingStore.add(embeddingModel.embed(segment).content(), segment);
         }
     }
-
-    //Takes any query and embeds the result for both nodes and relationships (IN PROGRESS --> Does not work well atm)
-    private static void embedNodesWithQuery(EmbeddingStore embeddingStore, String query) {
-        EmbeddingModel embeddingModel = new BgeSmallEnV15QuantizedEmbeddingModel();
-        Driver driver = GraphDatabase.driver("bolt://localhost:7687", AuthTokens.basic("neo4j", "Password123"));
-        Session session = driver.session(SessionConfig.forDatabase("neo4j"));
-
-        var result = session.run(query);
-        while (result.hasNext()) {
-            Record record = result.next();
-            for (Value value : record.values()) {
-                if (value.hasType(org.neo4j.driver.types.TypeSystem.getDefault().NODE())) {
-                    Node node = value.asNode();
-                    String nodeText = formatNodeText(node);
-                    String label = node.labels().iterator().next();
-                    TextSegment segment = TextSegment.from(nodeText, metadata("label", label));
-                    embeddingStore.add(embeddingModel.embed(segment).content(), segment);
-                } else if (value.hasType(org.neo4j.driver.types.TypeSystem.getDefault().RELATIONSHIP())) { //Not recommended
-                    Relationship relationship = value.asRelationship();
-                    String relationshipText = formatRelationshipText(relationship);
-                    TextSegment segment = TextSegment.from(relationshipText, metadata("type", relationship.type()));
-                    embeddingStore.add(embeddingModel.embed(segment).content(), segment);
-                }
-            }
-        }
-        session.close();
-        driver.close();
-    }
-
 
     //Query 1
     private static void EmbedQuery1(EmbeddingStore embeddingStore) {
@@ -432,25 +508,5 @@ public class EmbedNeo4jDB {
                     metadata("label", "sports"));
             embeddingStore.add(embeddingModel.embed(segment).content(), segment);
         }
-    }
-
-    // Helper method to format node text for embedding
-    private static String formatNodeText(Node node) {
-        StringBuilder sb = new StringBuilder();
-        node.asMap().forEach((key, value) -> sb.append(key).append(": ").append(value.toString()).append(" ,"));
-        return sb.toString();
-    }
-
-    // Helper method to format relationship text for embedding (not recommended)
-    private static String formatRelationshipText(Relationship relationship) {
-        String startNode = relationship.startNodeId() + "";
-        String endNode = relationship.endNodeId() + "";
-        String type = relationship.type();
-        StringBuilder sb = new StringBuilder();
-        sb.append("Start Node ID: ").append(startNode).append(", ");
-        sb.append("End Node ID: ").append(endNode).append(", ");
-        sb.append("Type: ").append(type).append(", ");
-        relationship.asMap().forEach((key, value) -> sb.append(key).append(": ").append(value).append(", "));
-        return sb.toString();
     }
 }

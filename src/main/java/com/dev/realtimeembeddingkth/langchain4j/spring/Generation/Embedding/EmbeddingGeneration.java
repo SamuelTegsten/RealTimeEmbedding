@@ -4,8 +4,10 @@ import com.dev.realtimeembeddingkth.langchain4j.spring.API.Service.SseService;
 import com.dev.realtimeembeddingkth.langchain4j.spring.ModelOptions.ModelObject.Model;
 import com.dev.realtimeembeddingkth.langchain4j.spring.ModelOptions.ModelObject.ModelList;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import dev.langchain4j.data.embedding.Embedding;
 import dev.langchain4j.data.message.AiMessage;
 
+import dev.langchain4j.data.segment.TextSegment;
 import dev.langchain4j.model.chat.ChatLanguageModel;
 import dev.langchain4j.model.embedding.EmbeddingModel;
 
@@ -16,14 +18,18 @@ import dev.langchain4j.rag.DefaultRetrievalAugmentor;
 import dev.langchain4j.rag.RetrievalAugmentor;
 import dev.langchain4j.rag.content.retriever.ContentRetriever;
 import dev.langchain4j.rag.content.retriever.EmbeddingStoreContentRetriever;
+import dev.langchain4j.rag.query.Query;
 import dev.langchain4j.rag.query.transformer.ExpandingQueryTransformer;
 import dev.langchain4j.rag.query.transformer.QueryTransformer;
 import dev.langchain4j.service.*;
 
+import dev.langchain4j.store.embedding.EmbeddingMatch;
+import dev.langchain4j.store.embedding.EmbeddingStore;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 import java.time.Duration;
+import java.util.List;
 import java.util.concurrent.CompletableFuture;
 
 import static com.dev.realtimeembeddingkth.langchain4j.spring.Config.OllamaServerConfig.OllamaServerCheck.baseUrl;
@@ -92,8 +98,12 @@ public class EmbeddingGeneration {
          * minScore 0.6 --> default value (most accurate)
          * maxResults 25 --> Trial and error value for most accurate response
          */
+
+
+        EmbeddingStore embeddingStore = initializeNeo4j();
+
         ContentRetriever contentRetriever = EmbeddingStoreContentRetriever.builder()
-                .embeddingStore(initializeNeo4j())
+                .embeddingStore(embeddingStore)
                 .embeddingModel(embeddingModel)
                 .minScore(0.6)
                 .maxResults(25)
@@ -119,23 +129,28 @@ public class EmbeddingGeneration {
         //Aggregates the contentRetriever and LLM.
         GeneralStreamAssistant assistant = AiServices.builder(GeneralStreamAssistant.class)
                 .streamingChatLanguageModel(initializeModel(modelObject))
-                .chatMemoryProvider(initModelMemory())
-                //.retrievalAugmentor(retrievalAugmentor)
+                //.chatMemoryProvider(initModelMemory())
+                //retrievalAugmentor(retrievalAugmentor)
                 .contentRetriever(contentRetriever)
                 .build();
+
+        Embedding queryEmbedding = embeddingModel.embed(question).content();
+        List<EmbeddingMatch<TextSegment>> relevant = embeddingStore.findRelevant(queryEmbedding, 25);
+        EmbeddingMatch<TextSegment> embeddingMatch = relevant.get(0);
 
         TokenStream tokenStream = assistant.chat(id, question);
 
         tokenStream.onNext(token -> {
             try {
                 //Remove comment to see tokens in the terminal.
-                //System.out.print(token);
+                System.out.print(token);
                 sseService.sendEvent(uuid, token, objectMapper);
             } catch (Exception e) {
                 futureResponse.completeExceptionally(e);
             }
         }).onComplete(response -> {
             try {
+                sseService.sendEvent(uuid, embeddingMatch.embedded().text(), objectMapper);
                 sseService.sendEvent(uuid, "#FC9123CFAA1953123#", objectMapper);
                 sseService.completeEmitter(uuid);
             } catch (Exception e) {

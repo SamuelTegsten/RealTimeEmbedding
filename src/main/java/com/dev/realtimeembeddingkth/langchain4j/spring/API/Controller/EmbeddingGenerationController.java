@@ -27,4 +27,11 @@ public class EmbeddingGenerationController {
         return "Streaming";
     }
 
+    //test
+
+    @GetMapping("/embeddingStreamTest")
+    public String generateStreamWithDocumentTest() throws IOException {
+        embeddingGenerationService.generateStreamWithEmbedding("List the number of participants in cultural schools for the year 2021 next to its municipality (Kommun)", "llama3", "12345", 1);
+        return "Streaming";
+    }
 }

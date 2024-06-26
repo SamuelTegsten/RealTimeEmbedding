@@ -15,7 +15,7 @@ public class InitializeNeo4j {
         EmbeddingStore<TextSegment> embeddingStore = Neo4jEmbeddingStore.builder()
                 .driver(GraphDatabase.driver("bolt://localhost:7687", AuthTokens.basic("neo4j", "Password123")))
                 .databaseName("neo4j")
-                .dimension(384) // Set the dimension of the embeddings, dont provide a value less then 384 or greater than 2000.
+                .dimension(384) // Set the dimension of the embeddings, dont provide a value less then 384 or greater than 4096.
                 .build();
 
         return embeddingStore;
