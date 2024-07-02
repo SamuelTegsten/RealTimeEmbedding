@@ -5,24 +5,26 @@ import dev.langchain4j.data.embedding.Embedding;
 import dev.langchain4j.data.segment.TextSegment;
 import dev.langchain4j.model.embedding.EmbeddingModel;
 import dev.langchain4j.model.embedding.bge.small.en.v15.BgeSmallEnV15QuantizedEmbeddingModel;
-import dev.langchain4j.retriever.EmbeddingStoreRetriever;
 import dev.langchain4j.store.embedding.EmbeddingMatch;
-import dev.langchain4j.store.embedding.EmbeddingSearchRequest;
 import dev.langchain4j.store.embedding.EmbeddingStore;
 import org.neo4j.driver.*;
 import org.neo4j.driver.Record;
 import org.neo4j.driver.types.Node;
 import org.neo4j.driver.types.Relationship;
 import org.neo4j.driver.types.TypeSystem;
+import org.springframework.stereotype.Component;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.logging.Filter;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import static com.dev.realtimeembeddingkth.langchain4j.spring.Generation.Embedding.InitializeNeo4j.initializeNeo4j;
 import static dev.langchain4j.data.document.Metadata.metadata;
 
+@Component
 public class EmbedNeo4jDB {
     public static void main(String[] args) {
         EmbeddingStore embeddingStore = initializeNeo4j();
@@ -50,7 +52,12 @@ public class EmbedNeo4jDB {
                         "I want data specifically for the year 2021.");
     }
 
-    //Takes any query and embeds the result for both nodes and relationships (IN PROGRESS --> Does not work well atm)
+    public void executeQuery(String query, String NLPQuestion){
+        EmbeddingStore<TextSegment> embeddingStore = initializeNeo4j();
+        embedNodesWithQuery(embeddingStore, query, NLPQuestion);
+    }
+
+    //Takes any query and embeds the result for both nodes and relationships
     private static void embedNodesWithQuery(EmbeddingStore embeddingStore, String query, String NLPQuestion) {
         EmbeddingModel embeddingModel = new BgeSmallEnV15QuantizedEmbeddingModel();
         Driver driver = GraphDatabase.driver("bolt://localhost:7687", AuthTokens.basic("neo4j", "Password123"));
@@ -66,36 +73,97 @@ public class EmbedNeo4jDB {
                     Node node = value.asNode();
                     String nodeText = formatNodeText(node);
                     String label = node.labels().iterator().next();
-                    TextSegment segment = TextSegment.from(nodeText, metadata("label", label));
+                    TextSegment segment = createTextSegment(nodeText, label);
                     segments.add(segment);
                 } else if (value.hasType(TypeSystem.getDefault().RELATIONSHIP())) {
                     Relationship relationship = value.asRelationship();
                     String relationshipText = formatRelationshipText(relationship);
-                    TextSegment segment = TextSegment.from(relationshipText, metadata("type", relationship.type()));
+                    TextSegment segment = createTextSegment(relationshipText, relationship.type());
                     segments.add(segment);
                 } else if (value.hasType(TypeSystem.getDefault().STRING())) {
                     String stringValue = value.asString();
-                    TextSegment segment = TextSegment.from(stringValue, metadata("type", "string"));
+                    TextSegment segment = createTextSegment(stringValue, "string");
                     segments.add(segment);
                 }
             }
         }
 
         // Embed all segments and concatenate embeddings
-        List<Embedding> embeddings = embeddingModel.embedAll(segments).content(); // Assuming embedAll returns a Response with getBody method
-        Embedding combinedEmbedding = combineEmbeddings(embeddings); // Function to combine embeddings into one
+        List<Embedding> embeddings = embeddingModel.embedAll(segments).content();
+        Embedding combinedEmbedding = combineEmbeddings(embeddings);
 
-        TextSegment textSegment = TextSegment.from(NLPQuestion + "Content: " + segments);
-        Embedding queryEmbedding = embeddingModel.embed(NLPQuestion).content();
-        List<EmbeddingMatch<TextSegment>> relevant = embeddingStore.findRelevant(queryEmbedding, 25);
-        EmbeddingMatch<TextSegment> embeddingMatch = relevant.get(0);
+        TextSegment textSegment = TextSegment.from(NLPQuestion + " Content: " + segments);
+        textSegment = TextSegment.from(cleanTextSegment(String.valueOf(textSegment), NLPQuestion));
 
-        System.out.println("Embedding Score: " + embeddingMatch.score() + "\n" + "Embedding Content: " + embeddingMatch.embedded().text());
+        System.out.println(textSegment);
 
         embeddingStore.add(combinedEmbedding, textSegment);
 
         session.close();
         driver.close();
+    }
+
+    private static String cleanTextSegment(String input, String NLPQuestion) {
+        // Clean out id: followed by a UUID
+        String cleanedText = input.replaceAll("id: [a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12} ,", "");
+
+        // Clean out value: followed by a number
+        cleanedText = cleanedText.replaceAll("value: (\\d+) ,", "$1 ,");
+
+        // Remove stray closing curly braces and encapsulate each block in curly braces {}
+        cleanedText = encapsulateBlocksInCurlyBraces(cleanedText);
+
+        return NLPQuestion + " " + cleanedText.trim();
+    }
+
+    private static String encapsulateBlocksInCurlyBraces(String input) {
+        // Pattern to find each block and encapsulate it in curly braces {}, also add Entry for each row in the neo4j table
+        Pattern blockPattern = Pattern.compile("\\w+: [^,}]+( , \\w+: [^,}]+)*");
+        Matcher matcher = blockPattern.matcher(input);
+
+        String label = extractLabel(input);
+        int rows = 0;
+
+        StringBuilder result = new StringBuilder();
+        while (matcher.find()) {
+            String block = matcher.group();
+            if(block.contains(label)){
+                result.append("} { Entry ").append(rows).append(":").append(" ").append(block).append(" ").append(", ");
+                rows++;
+            } else {
+                result.append(" ").append(block).append(" ").append(", ");
+            }
+        }
+
+        if (!result.isEmpty()) {
+            result.delete(result.length() - 2, result.length());
+        }
+
+        return result.toString();
+    }
+
+    private static String extractLabel(String input) {
+        Pattern pattern = Pattern.compile("text = \"(\\w+):");
+        Matcher matcher = pattern.matcher(input);
+
+        if (matcher.find()) {
+            return matcher.group(1);
+        } else {
+            return "";
+        }
+    }
+
+    private static Map<String, Object> metadataMap(String value) {
+        Map<String, Object> metadata = new HashMap<>();
+        metadata.put("label", value);
+        return metadata;
+    }
+
+    private static TextSegment createTextSegment(String cleanedText, String label) {
+        if (cleanedText == null || cleanedText.isBlank()) {
+            throw new IllegalArgumentException("Cleaned text cannot be null or blank");
+        }
+        return TextSegment.from(label + ": " + cleanedText, Metadata.from(metadataMap(label)));
     }
 
     private static Embedding combineEmbeddings(List<Embedding> embeddings) {

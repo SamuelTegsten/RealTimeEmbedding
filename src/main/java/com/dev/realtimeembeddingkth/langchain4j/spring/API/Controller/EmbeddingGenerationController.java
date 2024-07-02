@@ -27,7 +27,15 @@ public class EmbeddingGenerationController {
         return "Streaming";
     }
 
-    //test
+    @PostMapping("/query")
+    public String executeQuery(
+            @RequestParam String query,
+            @RequestParam String NLPQuestion)  {
+        embeddingGenerationService.executeQuery(query, NLPQuestion);
+        return "Executing Query";
+    }
+
+
 
     @GetMapping("/embeddingStreamTest")
     public String generateStreamWithDocumentTest() throws IOException {

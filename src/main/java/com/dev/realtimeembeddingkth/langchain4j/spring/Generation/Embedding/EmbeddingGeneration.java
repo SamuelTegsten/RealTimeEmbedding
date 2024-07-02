@@ -51,8 +51,8 @@ public class EmbeddingGeneration {
      */
 
     interface GeneralStreamAssistant{
-        @SystemMessage("Show the content in a numbered list: 1 , 2 , 3... etc. " +
-        "Include all relevant information found")
+        @SystemMessage({"Show the content in a numbered list: 1 , 2 , 3... etc.",
+        "Show all content from { Entry ... }"})
         TokenStream chat(@MemoryId int memoryId, @UserMessage String userMessage);
     }
 
@@ -100,7 +100,7 @@ public class EmbeddingGeneration {
          */
 
 
-        EmbeddingStore embeddingStore = initializeNeo4j();
+        EmbeddingStore<TextSegment> embeddingStore = initializeNeo4j();
 
         ContentRetriever contentRetriever = EmbeddingStoreContentRetriever.builder()
                 .embeddingStore(embeddingStore)
@@ -136,7 +136,12 @@ public class EmbeddingGeneration {
 
         Embedding queryEmbedding = embeddingModel.embed(question).content();
         List<EmbeddingMatch<TextSegment>> relevant = embeddingStore.findRelevant(queryEmbedding, 25);
-        EmbeddingMatch<TextSegment> embeddingMatch = relevant.get(0);
+        String text = String.valueOf(relevant);
+        int startIndex = text.indexOf("{ Entry: 0");
+        int endIndex = text.indexOf("metadata = {}", startIndex + 1);
+        String extractedText = text.substring(startIndex + 1, endIndex);
+
+        System.out.println(extractedText);
 
         TokenStream tokenStream = assistant.chat(id, question);
 
@@ -150,7 +155,7 @@ public class EmbeddingGeneration {
             }
         }).onComplete(response -> {
             try {
-                sseService.sendEvent(uuid, embeddingMatch.embedded().text(), objectMapper);
+                sseService.sendEvent(uuid, extractedText, objectMapper);
                 sseService.sendEvent(uuid, "#FC9123CFAA1953123#", objectMapper);
                 sseService.completeEmitter(uuid);
             } catch (Exception e) {

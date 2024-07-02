@@ -30,7 +30,7 @@ public class InitializeStreamByModel {
         return OllamaStreamingChatModel.builder()
                 .baseUrl(baseUrl)
                 .modelName(modelName)
-                .timeout(Duration.ofMinutes(2))
+                .timeout(Duration.ofMinutes(10))
                 .build();
     }
 }
