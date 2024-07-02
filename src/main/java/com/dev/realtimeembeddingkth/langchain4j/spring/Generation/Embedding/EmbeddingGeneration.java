@@ -18,19 +18,16 @@ import dev.langchain4j.rag.DefaultRetrievalAugmentor;
 import dev.langchain4j.rag.RetrievalAugmentor;
 import dev.langchain4j.rag.content.retriever.ContentRetriever;
 import dev.langchain4j.rag.content.retriever.EmbeddingStoreContentRetriever;
-import dev.langchain4j.rag.query.Query;
 import dev.langchain4j.rag.query.transformer.ExpandingQueryTransformer;
 import dev.langchain4j.rag.query.transformer.QueryTransformer;
 import dev.langchain4j.service.*;
 
-import dev.langchain4j.store.embedding.EmbeddingMatch;
 import dev.langchain4j.store.embedding.EmbeddingSearchRequest;
 import dev.langchain4j.store.embedding.EmbeddingStore;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 import java.time.Duration;
-import java.util.List;
 import java.util.concurrent.CompletableFuture;
 
 import static com.dev.realtimeembeddingkth.langchain4j.spring.Config.OllamaServerConfig.OllamaServerCheck.baseUrl;
@@ -131,7 +128,7 @@ public class EmbeddingGeneration {
         GeneralStreamAssistant assistant = AiServices.builder(GeneralStreamAssistant.class)
                 .streamingChatLanguageModel(initializeModel(modelObject))
                 //.chatMemoryProvider(initModelMemory())
-                //retrievalAugmentor(retrievalAugmentor)
+                //.retrievalAugmentor(retrievalAugmentor)
                 .contentRetriever(contentRetriever)
                 .build();
 
