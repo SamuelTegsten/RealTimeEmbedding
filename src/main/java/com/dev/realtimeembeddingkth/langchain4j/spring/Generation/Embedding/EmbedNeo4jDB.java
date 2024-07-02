@@ -5,7 +5,6 @@ import dev.langchain4j.data.embedding.Embedding;
 import dev.langchain4j.data.segment.TextSegment;
 import dev.langchain4j.model.embedding.EmbeddingModel;
 import dev.langchain4j.model.embedding.bge.small.en.v15.BgeSmallEnV15QuantizedEmbeddingModel;
-import dev.langchain4j.store.embedding.EmbeddingMatch;
 import dev.langchain4j.store.embedding.EmbeddingStore;
 import org.neo4j.driver.*;
 import org.neo4j.driver.Record;
@@ -28,17 +27,6 @@ import static dev.langchain4j.data.document.Metadata.metadata;
 public class EmbedNeo4jDB {
     public static void main(String[] args) {
         EmbeddingStore embeddingStore = initializeNeo4j();
-        // Uncomment the desired embedding function to run
-        //EmbedQuery1(embeddingStore);
-        //EmbedQuery2(embeddingStore);
-        //EmbedQuery3(embeddingStore);
-        //EmbedQuery4(embeddingStore);
-        //EmbedQuery5(embeddingStore);
-        //EmbedQuery6(embeddingStore);
-        //EmbedQuery7(embeddingStore);
-        //EmbedQuery8(embeddingStore);
-        //EmbedQuery9(embeddingStore);
-        //EmbedQuery10(embeddingStore);
         embedNodesWithQuery(embeddingStore, "MATCH (k:Kommun)" +
                 "MATCH (ay:Years)" +
                 "WHERE ay.year = 2021 " +
@@ -94,8 +82,6 @@ public class EmbedNeo4jDB {
 
         TextSegment textSegment = TextSegment.from(NLPQuestion + " Content: " + segments);
         textSegment = TextSegment.from(cleanTextSegment(String.valueOf(textSegment), NLPQuestion));
-
-        System.out.println(textSegment);
 
         embeddingStore.add(combinedEmbedding, textSegment);
 

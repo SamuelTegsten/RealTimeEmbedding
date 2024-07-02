@@ -24,6 +24,7 @@ import dev.langchain4j.rag.query.transformer.QueryTransformer;
 import dev.langchain4j.service.*;
 
 import dev.langchain4j.store.embedding.EmbeddingMatch;
+import dev.langchain4j.store.embedding.EmbeddingSearchRequest;
 import dev.langchain4j.store.embedding.EmbeddingStore;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
@@ -135,8 +136,14 @@ public class EmbeddingGeneration {
                 .build();
 
         Embedding queryEmbedding = embeddingModel.embed(question).content();
-        List<EmbeddingMatch<TextSegment>> relevant = embeddingStore.findRelevant(queryEmbedding, 25);
-        String text = String.valueOf(relevant);
+        EmbeddingSearchRequest embeddingSearchRequest = EmbeddingSearchRequest.builder()
+                .maxResults(25)
+                .minScore(0.6)
+                .queryEmbedding(queryEmbedding)
+                .build();
+
+        var relevant = embeddingStore.search(embeddingSearchRequest);
+        String text = String.valueOf(relevant.matches());
         int startIndex = text.indexOf("{ Entry: 0");
         int endIndex = text.indexOf("metadata = {}", startIndex + 1);
         String extractedText = text.substring(startIndex + 1, endIndex);
@@ -147,7 +154,6 @@ public class EmbeddingGeneration {
 
         tokenStream.onNext(token -> {
             try {
-                //Remove comment to see tokens in the terminal.
                 System.out.print(token);
                 sseService.sendEvent(uuid, token, objectMapper);
             } catch (Exception e) {
