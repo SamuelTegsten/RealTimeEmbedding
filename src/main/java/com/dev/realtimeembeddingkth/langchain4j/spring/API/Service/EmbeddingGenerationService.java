@@ -16,7 +16,7 @@ public class EmbeddingGenerationService {
         this.embeddingNeo4jDB = embeddingNeo4jDB;
     }
 
-    public void generateStreamWithEmbedding(String question, String modelName, String uuid, int id) {
+    public void generateStreamWithEmbedding(String question, String modelName, String uuid, int id) throws Exception {
         embeddingGeneration.generateEmbedding(question, modelName, uuid, id);
     }
 

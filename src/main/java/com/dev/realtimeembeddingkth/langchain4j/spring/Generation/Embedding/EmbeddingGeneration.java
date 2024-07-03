@@ -8,6 +8,7 @@ import dev.langchain4j.data.embedding.Embedding;
 import dev.langchain4j.data.message.AiMessage;
 
 import dev.langchain4j.data.segment.TextSegment;
+import dev.langchain4j.memory.chat.ChatMemoryProvider;
 import dev.langchain4j.model.chat.ChatLanguageModel;
 import dev.langchain4j.model.embedding.EmbeddingModel;
 
@@ -74,7 +75,7 @@ public class EmbeddingGeneration {
      * @param id the specific conversation ID
      */
 
-    public void generateEmbedding(String question, String modelName, String uuid, int id){
+    public void generateEmbedding(String question, String modelName, String uuid, int id) throws Exception {
 
         /**
          * findModelByName gets the model Object from the @param modelName
@@ -107,29 +108,13 @@ public class EmbeddingGeneration {
                 .maxResults(25)
                 .build();
 
-        //Is only used for RetrievalAugmentor
-        ChatLanguageModel model = OllamaChatModel.builder()
-                .baseUrl(baseUrl)
-                .modelName(modelName)
-                .timeout(Duration.ofMinutes(2))
-                .maxRetries(3)
-                .build();
-
-        //Is only used for RetrievalAugmentor
-        QueryTransformer queryTransformer = new ExpandingQueryTransformer(model);
-
-        //Currently worse than the contentRetriever on its own. Might be able to produce better responses with better ExpandingQueryTransformer.
-        RetrievalAugmentor retrievalAugmentor = DefaultRetrievalAugmentor.builder()
-                .queryTransformer(queryTransformer)
-                .contentRetriever(contentRetriever)
-                .build();
+        ChatMemoryProvider chatMemoryProvider = initModelMemory();
 
         //Aggregates the contentRetriever and LLM.
         GeneralStreamAssistant assistant = AiServices.builder(GeneralStreamAssistant.class)
                 .streamingChatLanguageModel(initializeModel(modelObject))
-                //.chatMemoryProvider(initModelMemory())
-                //.retrievalAugmentor(retrievalAugmentor)
-                .contentRetriever(contentRetriever)
+                .chatMemoryProvider(chatMemoryProvider)
+                //.contentRetriever(contentRetriever)
                 .build();
 
         Embedding queryEmbedding = embeddingModel.embed(question).content();
@@ -141,14 +126,38 @@ public class EmbeddingGeneration {
 
         var relevant = embeddingStore.search(embeddingSearchRequest);
         String text = String.valueOf(relevant.matches());
-        int startIndex = text.indexOf("{ Entry: 0");
-        int endIndex = text.indexOf("metadata = {}", startIndex + 1);
-        String extractedText = text.substring(startIndex + 1, endIndex);
 
-        System.out.println(extractedText);
+        int startIndex = text.indexOf("Entry");
 
-        TokenStream tokenStream = assistant.chat(id, question);
+        String extractedText = null;
+        if (startIndex != -1) {
+            int endIndex = text.indexOf("metadata = {}", startIndex);
+            if (endIndex != -1) {
+                extractedText = text.substring(startIndex, endIndex);
+                extractedText = extractedText.replaceAll("TextSegment", "");
+                extractedText = extractedText.replaceAll("Content:", "");
+                extractedText = extractedText.replaceAll("\\[", "");
+                extractedText = extractedText.replaceAll("\\{", "");
+                extractedText = extractedText.replaceAll("}", "");
+                extractedText = extractedText.replaceAll("text =", "");
+                extractedText = extractedText.replaceAll(" = ", "");
+                extractedText = extractedText.replaceAll("\\{ text =", "");
+                extractedText = extractedText.replaceAll("\"", "");
+                extractedText = extractedText.replaceAll("metadata", "");
+                extractedText = extractedText.replaceAll("label", "");
+                extractedText = extractedText.replaceAll("Entry", "\nEntry");
+            } else {
+                System.out.println("End index not found.");
+            }
+        } else {
+            System.out.println("Start index not found.");
+        }
 
+        System.out.println("CON ID: " + id);
+
+        TokenStream tokenStream = assistant.chat(id, question + "Content to use: " + extractedText);
+
+        String finalExtractedText = extractedText;
         tokenStream.onNext(token -> {
             try {
                 System.out.print(token);
@@ -158,7 +167,7 @@ public class EmbeddingGeneration {
             }
         }).onComplete(response -> {
             try {
-                sseService.sendEvent(uuid, extractedText, objectMapper);
+                sseService.sendEvent(uuid, "\n" + finalExtractedText + "\n", objectMapper);
                 sseService.sendEvent(uuid, "#FC9123CFAA1953123#", objectMapper);
                 sseService.completeEmitter(uuid);
             } catch (Exception e) {

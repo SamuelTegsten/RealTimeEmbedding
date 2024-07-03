@@ -22,7 +22,7 @@ public class EmbeddingGenerationController {
             @RequestParam String message,
             @RequestParam String uuid,
             @RequestParam String modelName,
-            @RequestParam int id) throws IOException {
+            @RequestParam int id) throws Exception {
         embeddingGenerationService.generateStreamWithEmbedding(message, modelName, uuid, id);
         return "Streaming";
     }
@@ -38,7 +38,7 @@ public class EmbeddingGenerationController {
 
 
     @GetMapping("/embeddingStreamTest")
-    public String generateStreamWithDocumentTest() throws IOException {
+    public String generateStreamWithDocumentTest() throws Exception {
         embeddingGenerationService.generateStreamWithEmbedding("List the number of participants in cultural schools for the year 2021 next to its municipality (Kommun)", "llama3", "12345", 1);
         return "Streaming";
     }

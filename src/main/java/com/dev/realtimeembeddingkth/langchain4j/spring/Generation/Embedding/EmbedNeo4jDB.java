@@ -52,9 +52,8 @@ public class EmbedNeo4jDB {
                     String relationshipText = formatRelationshipText(relationship);
                     TextSegment segment = createTextSegment(relationshipText, relationship.type());
                     segments.add(segment);
-                } else if (value.hasType(TypeSystem.getDefault().STRING())) {
-                    String stringValue = value.asString();
-                    TextSegment segment = createTextSegment(stringValue, "string");
+                } else if (value.hasType(TypeSystem.getDefault().ANY())) {
+                    TextSegment segment = createTextSegment(String.valueOf(value), key);
                     segments.add(segment);
                 }
             }
@@ -66,6 +65,8 @@ public class EmbedNeo4jDB {
 
         TextSegment textSegment = TextSegment.from(NLPQuestion + " Content: " + segments);
         textSegment = TextSegment.from(cleanTextSegment(String.valueOf(textSegment), NLPQuestion));
+
+        System.out.println(textSegment.toString());
 
         embeddingStore.add(combinedEmbedding, textSegment);
 
@@ -133,6 +134,19 @@ public class EmbedNeo4jDB {
 
         // Remove stray closing curly braces and encapsulate each block in curly braces {}
         cleanedText = encapsulateBlocksInCurlyBraces(cleanedText);
+
+        cleanedText = cleanedText.replaceAll("TextSegment", "");
+        cleanedText = cleanedText.replaceAll("Content:", "");
+        cleanedText = cleanedText.replaceAll("\\[", "");
+        cleanedText = cleanedText.replaceAll("\\{", "");
+        cleanedText = cleanedText.replaceAll("}", "");
+        cleanedText = cleanedText.replaceAll("text =", "");
+        cleanedText = cleanedText.replaceAll(" = ", "");
+        cleanedText = cleanedText.replaceAll("\\{ text =", "");
+        cleanedText = cleanedText.replaceAll("\"", "");
+        cleanedText = cleanedText.replaceAll("metadata", "");
+        cleanedText = cleanedText.replaceAll("label", "");
+        cleanedText = cleanedText.replaceAll("Entry", "\nEntry");
 
         return NLPQuestion + " " + cleanedText.trim();
     }
