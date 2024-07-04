@@ -1,6 +1,8 @@
 package com.dev.realtimeembeddingkth.langchain4j.spring.Neo4jConfig.Neo4jService;
 
 import com.dev.realtimeembeddingkth.langchain4j.spring.Neo4jConfig.Neo4jConnector.Neo4jConnector;
+import org.neo4j.driver.*;
+import org.neo4j.driver.Record;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -14,9 +16,14 @@ import java.util.List;
 public class Neo4jService {
 
     private final Neo4jConnector neo4jConnector = new Neo4jConnector();
+    private Driver driver;
 
     public boolean connect(String uri, String user, String password) {
-        return neo4jConnector.connect(uri, user, password);
+        boolean connected = neo4jConnector.connect(uri, user, password);
+        if (connected) {
+            driver = GraphDatabase.driver(uri, AuthTokens.basic(user, password));
+        }
+        return connected;
     }
 
     public void createDatabase(String databaseName, String user, String password) {
@@ -54,6 +61,24 @@ public class Neo4jService {
         neo4jConnector.loadDatabaseFromDump(databaseName, tempFile);
         tempFile.delete();
     }
+
+    public boolean deleteDocument(String text) {
+        if (driver == null) {
+            throw new IllegalStateException("Not connected to Neo4j database");
+        }
+
+        try (Session session = driver.session()) {
+            String query = "MATCH (d:Document) WHERE d.text CONTAINS $text DETACH DELETE d RETURN COUNT(d) AS count";
+            Result result = session.run(query, Values.parameters("text", text));
+
+            if (result.hasNext()) {
+                Record record = result.next();
+                int count = record.get("count").asInt();
+                return count > 0;
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return false;
+    }
 }
-
-

@@ -42,6 +42,11 @@ public class Neo4jController {
         return "Databases created from file successfully";
     }
 
+    @PostMapping("/deleteDocument")
+    public boolean deleteDocument(@RequestParam("text") String text) {
+        return neo4jService.deleteDocument(text);
+    }
+
     @PostMapping("/loadDump")
     public String loadDump(@RequestParam String databaseName,@RequestParam String dumpName, @RequestParam("dumpFile") MultipartFile dumpFile) {
         try {

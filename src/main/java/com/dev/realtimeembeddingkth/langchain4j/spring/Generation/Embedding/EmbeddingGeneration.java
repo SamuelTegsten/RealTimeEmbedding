@@ -1,6 +1,7 @@
 package com.dev.realtimeembeddingkth.langchain4j.spring.Generation.Embedding;
 
 import com.dev.realtimeembeddingkth.langchain4j.spring.API.Service.SseService;
+import com.dev.realtimeembeddingkth.langchain4j.spring.Generation.Stream.StreamGeneration;
 import com.dev.realtimeembeddingkth.langchain4j.spring.ModelOptions.ModelObject.Model;
 import com.dev.realtimeembeddingkth.langchain4j.spring.ModelOptions.ModelObject.ModelList;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -41,6 +42,7 @@ import static com.dev.realtimeembeddingkth.langchain4j.spring.ModelMemory.InitMo
 public class EmbeddingGeneration {
     private final SseService sseService;
     private final ObjectMapper objectMapper;
+    private GeneralStreamAssistant assistant;
 
     /**
      * Interface defining a general stream assistant for chat operations.
@@ -108,13 +110,10 @@ public class EmbeddingGeneration {
                 .maxResults(25)
                 .build();
 
-        ChatMemoryProvider chatMemoryProvider = initModelMemory();
-
         //Aggregates the contentRetriever and LLM.
-        GeneralStreamAssistant assistant = AiServices.builder(GeneralStreamAssistant.class)
+        assistant = AiServices.builder(GeneralStreamAssistant.class)
                 .streamingChatLanguageModel(initializeModel(modelObject))
-                .chatMemoryProvider(chatMemoryProvider)
-                //.contentRetriever(contentRetriever)
+                .chatMemoryProvider(initModelMemory())
                 .build();
 
         Embedding queryEmbedding = embeddingModel.embed(question).content();
@@ -153,11 +152,12 @@ public class EmbeddingGeneration {
             System.out.println("Start index not found.");
         }
 
-        System.out.println("CON ID: " + id);
+        sseService.sendEvent(uuid, "\n" + extractedText + "\n", objectMapper);
+        sseService.sendEvent(uuid, "#FC9123CFAA1953123#", objectMapper);
 
+        /*
         TokenStream tokenStream = assistant.chat(id, question + "Content to use: " + extractedText);
 
-        String finalExtractedText = extractedText;
         tokenStream.onNext(token -> {
             try {
                 System.out.print(token);
@@ -167,7 +167,7 @@ public class EmbeddingGeneration {
             }
         }).onComplete(response -> {
             try {
-                sseService.sendEvent(uuid, "\n" + finalExtractedText + "\n", objectMapper);
+                sseService.sendEvent(uuid, "\n" + extractedText + "\n", objectMapper);
                 sseService.sendEvent(uuid, "#FC9123CFAA1953123#", objectMapper);
                 sseService.completeEmitter(uuid);
             } catch (Exception e) {
@@ -179,5 +179,6 @@ public class EmbeddingGeneration {
         }).start();
 
         futureResponse.join();
+         */
     }
 }

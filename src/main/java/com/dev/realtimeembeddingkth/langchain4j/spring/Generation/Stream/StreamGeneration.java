@@ -48,6 +48,8 @@ public class StreamGeneration {
                 .chatMemoryProvider(initModelMemory())
                 .build();
 
+        System.out.println("CON ID: " + id);
+
         TokenStream tokenStream = assistant.chat(id, question);
 
         tokenStream.onNext(token -> {

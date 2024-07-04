@@ -59,16 +59,15 @@ public class EmbedNeo4jDB {
             }
         }
 
-        // Embed all segments and concatenate embeddings
-        List<Embedding> embeddings = embeddingModel.embedAll(segments).content();
-        Embedding combinedEmbedding = combineEmbeddings(embeddings);
+        //Embed all segments and concatenate embeddings
+        //List<Embedding> embeddings = embeddingModel.embedAll(segments).content();
+        //Embedding combinedEmbedding = combineEmbeddings(embeddings);
+        Embedding embedding = embeddingModel.embed(NLPQuestion).content();
 
         TextSegment textSegment = TextSegment.from(NLPQuestion + " Content: " + segments);
         textSegment = TextSegment.from(cleanTextSegment(String.valueOf(textSegment), NLPQuestion));
 
-        System.out.println(textSegment.toString());
-
-        embeddingStore.add(combinedEmbedding, textSegment);
+        embeddingStore.add(embedding, textSegment);
 
         session.close();
         driver.close();
